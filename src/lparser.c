@@ -628,20 +628,38 @@ static void singlevar (LexState *ls, expdesc *var) {
 static void ravi_code_typecoersion(LexState *ls, int reg, ravi_type_map tm,
                                    TString *typename /* only if tt is USERDATA */) {
   /* do we need to convert ? */
-  if (tm == RAVI_TM_FLOAT || tm == RAVI_TM_INTEGER)
     /* code an instruction to convert in place */
-    luaK_codeABC(ls->fs, tm == RAVI_TM_FLOAT ? OP_RAVI_TOFLT : OP_RAVI_TOINT, reg, 0, 0);
-  else if (tm == RAVI_TM_INTEGER_ARRAY || tm == RAVI_TM_FLOAT_ARRAY)
-    luaK_codeABC(ls->fs, tm == RAVI_TM_INTEGER_ARRAY ? OP_RAVI_TOIARRAY : OP_RAVI_TOFARRAY, reg, 0, 0);
+  // mandatory types
+  if (tm == RAVI_TM_FLOAT)
+    luaK_codeABC(ls->fs, OP_RAVI_TOFLT, reg, 0, 0);
+  else if (tm == RAVI_TM_INTEGER)
+    luaK_codeABC(ls->fs, OP_RAVI_TOINT, reg, 0, 0);
   else if (tm == RAVI_TM_TABLE)
     luaK_codeABC(ls->fs, OP_RAVI_TOTAB, reg, 0, 0);
-  else if (tm == RAVI_TM_USERDATA_OR_NIL)
+  else if (tm == RAVI_TM_USERDATA)
     luaK_codeABx(ls->fs, OP_RAVI_TOTYPE, reg, luaK_stringK(ls->fs, typename));
-  else if (tm == RAVI_TM_STRING_OR_NIL)
+  else if (tm == RAVI_TM_STRING)
     luaK_codeABC(ls->fs, OP_RAVI_TOSTRING, reg, 0, 0);
-  else if (tm == RAVI_TM_FUNCTION_OR_NIL)
+  else if (tm == RAVI_TM_BOOLEAN)
+    luaK_codeABC(ls->fs, OP_RAVI_TOBOOLEAN, reg, 0, 0);
+  else if (tm == RAVI_TM_FUNCTION)
     luaK_codeABC(ls->fs, OP_RAVI_TOCLOSURE, reg, 0, 0);
-  // TODO coerse to boolean
+  // optional types
+  else if (tm == RAVI_TM_FLOAT_OR_NIL)
+    luaK_codeABC(ls->fs, OP_RAVI_TOFLT_NIL, reg, 0, 0);
+  else if (tm == RAVI_TM_INTEGER_OR_NIL)
+    luaK_codeABC(ls->fs, OP_RAVI_TOINT_NIL, reg, 0, 0);
+  else if (tm == RAVI_TM_TABLE_OR_NIL)
+    luaK_codeABC(ls->fs, OP_RAVI_TOTAB_NIL, reg, 0, 0);
+  else if (tm == RAVI_TM_USERDATA_OR_NIL)
+    luaK_codeABx(ls->fs, OP_RAVI_TOTYPE_NIL, reg, luaK_stringK(ls->fs, typename));
+  else if (tm == RAVI_TM_STRING_OR_NIL)
+    luaK_codeABC(ls->fs, OP_RAVI_TOSTRING_NIL, reg, 0, 0);
+  else if (tm == RAVI_TM_FUNCTION_OR_NIL)
+    luaK_codeABC(ls->fs, OP_RAVI_TOCLOSURE_NIL, reg, 0, 0);
+  // array types
+  else if (tm == RAVI_TM_INTEGER_ARRAY || tm == RAVI_TM_FLOAT_ARRAY)
+    luaK_codeABC(ls->fs, tm == RAVI_TM_INTEGER_ARRAY ? OP_RAVI_TOIARRAY : OP_RAVI_TOFARRAY, reg, 0, 0);
 }
 
 /* RAVI code an instruction to initialize a scalar typed value
@@ -1270,16 +1288,18 @@ static ravi_type_map declare_localvar(LexState *ls, TString **pusertype) {
      * the lexer doesn't need to be changed
      */
     if (strcmp(str, "integer") == 0)
-      tm = RAVI_TM_INTEGER;
+      tm = testnext(ls, '?') ? RAVI_TM_INTEGER_OR_NIL : RAVI_TM_INTEGER;
     else if (strcmp(str, "number") == 0)
-      tm = RAVI_TM_FLOAT;
+      tm = testnext(ls, '?') ? RAVI_TM_FLOAT_OR_NIL : RAVI_TM_FLOAT;
     else if (strcmp(str, "closure") == 0)
-      tm = RAVI_TM_FUNCTION_OR_NIL;
+      tm = testnext(ls, '?') ? RAVI_TM_FUNCTION_OR_NIL : RAVI_TM_FUNCTION;
     else if (strcmp(str, "table") == 0)
-      tm = RAVI_TM_TABLE;
+      tm = testnext(ls, '?') ? RAVI_TM_TABLE_OR_NIL : RAVI_TM_TABLE;
     else if (strcmp(str, "string") == 0)
-      tm = RAVI_TM_STRING_OR_NIL;
-    //else if (strcmp(str, "boolean") == 0)
+      tm = testnext(ls, '?') ? RAVI_TM_STRING_OR_NIL : RAVI_TM_STRING;
+    else if (strcmp(str, "boolean") == 0) {
+      tm = testnext(ls, '?') ? RAVI_TM_BOOLEAN_OR_NIL : RAVI_TM_BOOLEAN;
+    }    //else if (strcmp(str, "boolean") == 0)
     //  tm = RAVI_TM_BOOLEAN_OR_NIL;
     else if (strcmp(str, "any") == 0)
       tm = RAVI_TM_ANY;

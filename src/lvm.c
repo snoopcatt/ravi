@@ -1327,12 +1327,20 @@ int luaV_execute (lua_State *L) {
     &&vmlabel(OP_RAVI_DIVII),
     &&vmlabel(OP_RAVI_TOINT),
     &&vmlabel(OP_RAVI_TOFLT),
-    &&vmlabel(OP_RAVI_TOIARRAY),
-    &&vmlabel(OP_RAVI_TOFARRAY),
     &&vmlabel(OP_RAVI_TOTAB),
     &&vmlabel(OP_RAVI_TOSTRING),
+    &&vmlabel(OP_RAVI_TOBOOLEAN),
     &&vmlabel(OP_RAVI_TOCLOSURE),
     &&vmlabel(OP_RAVI_TOTYPE),
+    &&vmlabel(OP_RAVI_TOINT_NIL),
+    &&vmlabel(OP_RAVI_TOFLT_NIL),
+    &&vmlabel(OP_RAVI_TOTAB_NIL),
+    &&vmlabel(OP_RAVI_TOSTRING_NIL),
+    &&vmlabel(OP_RAVI_TOBOOLEAN_NIL),
+    &&vmlabel(OP_RAVI_TOCLOSURE_NIL),
+    &&vmlabel(OP_RAVI_TOTYPE_NIL),
+    &&vmlabel(OP_RAVI_TOIARRAY),
+    &&vmlabel(OP_RAVI_TOFARRAY),
     &&vmlabel(OP_RAVI_MOVEI),
     &&vmlabel(OP_RAVI_MOVEF),
     &&vmlabel(OP_RAVI_MOVEIARRAY),
@@ -2574,27 +2582,66 @@ int luaV_execute (lua_State *L) {
           luaG_runerror(L, "table expected");
         vmbreak;
       }
-      vmcase(OP_RAVI_TOIARRAY) {
-        if (RAVI_UNLIKELY(!ttisiarray(ra)))
-          luaG_runerror(L, "integer[] expected");
-        vmbreak;
-      }
-      vmcase(OP_RAVI_TOFARRAY) {
-        if (RAVI_UNLIKELY(!ttisfarray(ra)))
-          luaG_runerror(L, "number[] expected");
-        vmbreak;
-      }
       vmcase(OP_RAVI_TOSTRING) {
-        if (!ttisnil(ra) && RAVI_UNLIKELY(!ttisstring(ra)))
-          luaG_runerror(L, "string expected");        
+        if (RAVI_UNLIKELY(!ttisstring(ra)))
+          luaG_runerror(L, "string expected");
+        vmbreak;
+      }
+      vmcase(OP_RAVI_TOBOOLEAN) {
+        if (RAVI_UNLIKELY(!ttisboolean(ra)))
+          luaG_runerror(L, "boolean expected");
         vmbreak;
       }
       vmcase(OP_RAVI_TOCLOSURE) {
-        if (!ttisnil(ra) && RAVI_UNLIKELY(!ttisclosure(ra)))
+        if (RAVI_UNLIKELY(!ttisclosure(ra)))
           luaG_runerror(L, "closure expected");
         vmbreak;
       }
       vmcase(OP_RAVI_TOTYPE) {
+          TValue *rb = k + GETARG_Bx(i);
+          if  (!ttisshrstring(rb))
+            luaG_runerror(L, "type name must be string");
+          TString *key = tsvalue(rb);
+          if (!raviV_check_usertype(L, key, ra))
+            luaG_runerror(L, "type mismatch: expected %s", getstr(key));
+        vmbreak;
+      }
+      // optional types
+      vmcase(OP_RAVI_TOINT_NIL) {
+        lua_Integer j;
+        if (RAVI_LIKELY(tointeger(ra, &j))) { setivalue(ra, j); }
+        else if(!ttisnil(ra))
+          luaG_runerror(L, "TOINT: integer expected");
+        vmbreak;
+      }
+      vmcase(OP_RAVI_TOFLT_NIL) {
+        lua_Number j;
+        if (RAVI_LIKELY(tonumber(ra, &j))) { setfltvalue(ra, j); }
+        else if(!ttisnil(ra))
+          luaG_runerror(L, "TOFLT: number expected");
+        vmbreak;
+      }
+      vmcase(OP_RAVI_TOTAB_NIL) {
+        if (RAVI_UNLIKELY(!ttisLtable(ra)) && !ttisnil(ra))
+          luaG_runerror(L, "table expected");
+        vmbreak;
+      }
+      vmcase(OP_RAVI_TOSTRING_NIL) {
+        if (RAVI_UNLIKELY(!ttisstring(ra)) && !ttisnil(ra))
+          luaG_runerror(L, "string expected");        
+        vmbreak;
+      }
+      vmcase(OP_RAVI_TOBOOLEAN_NIL) {
+        if (RAVI_UNLIKELY(!ttisboolean(ra)) && !ttisnil(ra))
+          luaG_runerror(L, "boolean expected");
+        vmbreak;
+      }
+      vmcase(OP_RAVI_TOCLOSURE_NIL) {
+        if (RAVI_UNLIKELY(!ttisclosure(ra)) && !ttisnil(ra))
+          luaG_runerror(L, "closure expected");
+        vmbreak;
+      }
+      vmcase(OP_RAVI_TOTYPE_NIL) {
         if (!ttisnil(ra)) {
           TValue *rb = k + GETARG_Bx(i);
           if  (!ttisshrstring(rb))
@@ -2603,6 +2650,17 @@ int luaV_execute (lua_State *L) {
           if (!raviV_check_usertype(L, key, ra))
             luaG_runerror(L, "type mismatch: expected %s", getstr(key));
         }
+        vmbreak;
+      }
+      // arrays
+      vmcase(OP_RAVI_TOIARRAY) {
+        if (RAVI_UNLIKELY(!ttisiarray(ra)))
+          luaG_runerror(L, "integer[] expected");
+        vmbreak;
+      }
+      vmcase(OP_RAVI_TOFARRAY) {
+        if (RAVI_UNLIKELY(!ttisfarray(ra)))
+          luaG_runerror(L, "number[] expected");
         vmbreak;
       }
 #ifdef RAVI_DEFER_STATEMENT

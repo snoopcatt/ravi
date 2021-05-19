@@ -219,12 +219,22 @@ OP_RAVI_DIVII,  /*	A B C	R(A) := RK(B) / RK(C)		*/
 
 OP_RAVI_TOINT, /* A R(A) := toint(R(A)) */
 OP_RAVI_TOFLT, /* A R(A) := tofloat(R(A)) */
-OP_RAVI_TOIARRAY, /* A R(A) := to_arrayi(R(A)) */
-OP_RAVI_TOFARRAY, /* A R(A) := to_arrayf(R(A)) */
 OP_RAVI_TOTAB,    /* A R(A) := to_table(R(A)) */
 OP_RAVI_TOSTRING, /* A R(A) := assert_string(R(A)) */
+OP_RAVI_TOBOOLEAN, /* A R(A) := assert_string(R(A)) */
 OP_RAVI_TOCLOSURE, /* A R(A) := assert_closure(R(A)) */
 OP_RAVI_TOTYPE,  /* A R(A) := assert_usertype(R(A)), where usertype has metatable in Lua registry */
+
+OP_RAVI_TOINT_NIL, /* A R(A) := toint(R(A)) */
+OP_RAVI_TOFLT_NIL, /* A R(A) := tofloat(R(A)) */
+OP_RAVI_TOTAB_NIL,    /* A R(A) := to_table(R(A)) */
+OP_RAVI_TOSTRING_NIL, /* A R(A) := assert_string(R(A)) */
+OP_RAVI_TOBOOLEAN_NIL, /* A R(A) := assert_string(R(A)) */
+OP_RAVI_TOCLOSURE_NIL, /* A R(A) := assert_closure(R(A)) */
+OP_RAVI_TOTYPE_NIL,  /* A R(A) := assert_usertype(R(A)), where usertype has metatable in Lua registry */
+
+OP_RAVI_TOIARRAY, /* A R(A) := to_arrayi(R(A)) */
+OP_RAVI_TOFARRAY, /* A R(A) := to_arrayf(R(A)) */
 
 OP_RAVI_MOVEI,       /*	A B	R(A) := R(B), check R(B) is int	*/
 OP_RAVI_MOVEF,       /*	A B	R(A) := R(B), check R(B) is float */
