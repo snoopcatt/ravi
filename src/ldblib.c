@@ -433,6 +433,15 @@ static int db_traceback (lua_State *L) {
   return 1;
 }
 
+static int db_settype (lua_State *L) {
+  const char *type = luaL_checkstring(L, 1);
+  lua_setfield(L, LUA_REGISTRYINDEX, type);
+  lua_pop(L, 1);
+  lua_pushvalue(L, LUA_REGISTRYINDEX);
+  lua_getfield(L, 1, type);
+  return 1;
+}
+
 
 static const luaL_Reg dblib[] = {
   {"debug", db_debug},
@@ -451,6 +460,7 @@ static const luaL_Reg dblib[] = {
   {"setmetatable", db_setmetatable},
   {"setupvalue", db_setupvalue},
   {"traceback", db_traceback},
+  {"settype", db_settype},
   {NULL, NULL}
 };
 
