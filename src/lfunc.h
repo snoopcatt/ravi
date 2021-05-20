@@ -32,7 +32,6 @@
 
 #define upisopen(up)	((up)->v != &(up)->u.value)
 
-#ifdef RAVI_DEFER_STATEMENT
 /*
 ** Special "status" for 'luaF_close'
 */
@@ -42,18 +41,13 @@
 
 /* close upvalues running all closing methods in protected mode */
 #define CLOSEPROTECT	(-2)
-#endif
 
 LUAI_FUNC Proto *luaF_newproto (lua_State *L);
 LUAI_FUNC CClosure *luaF_newCclosure (lua_State *L, int nelems);
 LUAI_FUNC LClosure *luaF_newLclosure (lua_State *L, int nelems);
 LUAI_FUNC void luaF_initupvals (lua_State *L, LClosure *cl);
 LUAI_FUNC UpVal *luaF_findupval (lua_State *L, StkId level);
-#ifdef RAVI_DEFER_STATEMENT
 LUAI_FUNC int luaF_close (lua_State *L, StkId level, int status);
-#else
-LUAI_FUNC void luaF_close (lua_State *L, StkId level);
-#endif
 LUAI_FUNC void luaF_freeproto (lua_State *L, Proto *f);
 /* The additional type argument is a Ravi extension */
 LUAI_FUNC const char *luaF_getlocalname (const Proto *func, int local_number,

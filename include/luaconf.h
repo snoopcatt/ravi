@@ -852,7 +852,6 @@
 /* Following cause the first hash lookup to be inlined,
    and if value is 2 then the second hash lookup is also inlined. */
 #define RAVI_USE_INLINE_SHORTSTR_TGET 1
-#define RAVI_DEFER_STATEMENT
 
 #endif
 

@@ -578,12 +578,8 @@ static const char Lua_header[] =
     "};\n"
     "struct UpVal {\n"
     "	TValue *v;\n"
-#ifdef RAVI_DEFER_STATEMENT
     "       unsigned int refcount;\n"
     "       unsigned int flags;\n"
-#else
-    "	lu_mem refcount;\n"
-#endif
     "	union {\n"
     "		struct {\n"
     "			UpVal *next;\n"
@@ -613,11 +609,7 @@ static const char Lua_header[] =
     "  (ttisinteger(o) ? (*(i) = ivalue(o), 1) : luaV_tointeger(o,i,LUA_FLOORN2I))\n"
     "extern int luaV_tonumber_(const TValue *obj, lua_Number *n);\n"
     "extern int luaV_tointeger(const TValue *obj, lua_Integer *p, int mode);\n"
-#ifdef RAVI_DEFER_STATEMENT
     "extern int luaF_close (lua_State *L, StkId level, int status);\n"
-#else
-    "extern void luaF_close (lua_State *L, StkId level);\n"
-#endif
     "extern int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres);\n"
     "extern void luaD_growstack (lua_State *L, int n);\n"
     "extern int luaV_equalobj(lua_State *L, const TValue *t1, const TValue *t2);\n"
@@ -654,9 +646,7 @@ static const char Lua_header[] =
     "extern void raviV_settable_sskey(lua_State *L, const TValue *t, TValue *key, TValue *val);\n"
     "extern void raviV_gettable_i(lua_State *L, const TValue *t, TValue *key, TValue *val);\n"
     "extern void raviV_settable_i(lua_State *L, const TValue *t, TValue *key, TValue *val);\n"
-#ifdef RAVI_DEFER_STATEMENT
     "extern void raviV_op_defer(lua_State *L, TValue *ra);\n"
-#endif
     "extern lua_Integer luaV_shiftl(lua_Integer x, lua_Integer y);\n"
     "extern void ravi_dump_value(lua_State *L, const struct lua_TValue *v);\n"
     "extern void raviV_op_bnot(lua_State *L, TValue *ra, TValue *rb);\n"
@@ -1180,17 +1170,11 @@ static int emit_op_mov(struct function *fn, Instruction *insn)
 static int emit_op_ret(struct function *fn, Instruction *insn)
 {
 	// TODO Only call luaF_close if needed (i.e. some variable escaped)
-#ifdef RAVI_DEFER_STATEMENT
 	if (raviX_ptrlist_size((const PtrList *)fn->proc->procs) > 0) {
 		raviX_buffer_add_string(&fn->body, "{\nluaF_close(L, base, LUA_OK);\n");
 		raviX_buffer_add_string(&fn->body, "base = ci->u.l.base;\n");
 		raviX_buffer_add_string(&fn->body, "}\n");
 	}
-#else
-	if (raviX_ptrlist_size((const PtrList *)fn->proc->procs) > 0) {
-		raviX_buffer_add_string(&fn->body, "luaF_close(L, base);\n");
-	}
-#endif
 	raviX_buffer_add_string(&fn->body, "{\n");
 	/* Results are copied to stack position given by ci->func and above.
 	 * stackbase is set here so S(n) refers to (stackbase+n)
@@ -1919,12 +1903,8 @@ static int emit_op_close(struct function *fn, Instruction *insn)
 	raviX_buffer_add_string(&fn->body, "{\n TValue *clsvar = ");
 	emit_reg_accessor(fn, pseudo, 0);
 	raviX_buffer_add_string(&fn->body, ";\n");
-#ifdef RAVI_DEFER_STATEMENT
 	raviX_buffer_add_string(&fn->body, " luaF_close(L, clsvar, LUA_OK);\n");
 	emit_reload_base(fn);
-#else
-	raviX_buffer_add_string(&fn->body, " luaF_close(L, clsvar);\n");
-#endif
 	raviX_buffer_add_string(&fn->body, "}\n");
 	return 0;
 }

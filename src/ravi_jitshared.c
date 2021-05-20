@@ -565,12 +565,8 @@ static const char Lua_header[] =
     "};\n"
     "struct UpVal {\n"
     "	TValue *v;\n"
-#ifdef RAVI_DEFER_STATEMENT
     "       unsigned int refcount;\n"
     "       unsigned int flags;\n"
-#else
-    "	lu_mem refcount;\n"
-#endif
     "	union {\n"
     "		struct {\n"
     "			UpVal *next;\n"

@@ -648,12 +648,8 @@ typedef struct Proto {
 
 typedef struct UpVal {
   TValue *v;  /* points to stack or to its own value */
-#ifdef RAVI_DEFER_STATEMENT
   unsigned int refcount;  /* reference counter */
   unsigned int flags; /* Used to mark deferred values */
-#else
-  lu_mem refcount;  /* reference counter */
-#endif
   union {
     struct {  /* (when open) */
       struct UpVal *next;  /* linked list */

@@ -258,11 +258,7 @@ void *ravi_alloc_f(void *msp, void *ptr, size_t osize, size_t nsize)
 
 static void close_state (lua_State *L) {
   global_State *g = G(L);
-#ifdef RAVI_DEFER_STATEMENT
   luaF_close(L, L->stack, CLOSEPROTECT);  /* close all upvalues for this thread */
-#else
-  luaF_close(L, L->stack);  /* close all upvalues for this thread */
-#endif
   luaC_freeallobjects(L);  /* collect all objects */
   if (g->version)  /* closing a fully built state? */
     luai_userstateclose(L);
@@ -310,18 +306,13 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
 
 void luaE_freethread (lua_State *L, lua_State *L1) {
   LX *l = fromstate(L1);
-#ifdef RAVI_DEFER_STATEMENT
   luaF_close(L1, L1->stack, NOCLOSINGMETH);  /* close all upvalues for this thread */
-#else
-  luaF_close(L1, L1->stack);  /* close all upvalues for this thread */
-#endif
   lua_assert(L1->openupval == NULL);
   luai_userstatefree(L, L1);
   freestack(L1);
   luaM_free(L, l);
 }
 
-#ifdef RAVI_DEFER_STATEMENT
 int lua_resetthread (lua_State *L) {
   CallInfo *ci;
   int status;
@@ -342,7 +333,6 @@ int lua_resetthread (lua_State *L) {
   lua_unlock(L);
   return status;
 }
-#endif
 
 /* TODO following should probably not live here*/
 

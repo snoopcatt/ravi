@@ -104,12 +104,10 @@ void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop) {
       setsvalue2s(L, oldtop, luaS_newliteral(L, "error in error handling"));
       break;
     }
-#ifdef RAVI_DEFER_STATEMENT
     case CLOSEPROTECT: {
       setnilvalue(oldtop);  /* no error message */
       break;
     }
-#endif
     default: {
       setobjs2s(L, oldtop, L->top - 1);  /* error message on current top */
       break;
@@ -126,9 +124,7 @@ l_noret luaD_throw (lua_State *L, int errcode) {
   }
   else {  /* thread has no error handler */
     global_State *g = G(L);
-#ifdef RAVI_DEFER_STATEMENT
     errcode = luaF_close(L, L->stack, errcode);  /* close all upvalues */
-#endif
     L->status = cast_byte(errcode);  /* mark it as dead */
     if (g->mainthread->errorJmp) {  /* main thread has a handler? */
       setobjs2s(L, g->mainthread->top++, L->top - 1);  /* copy error obj. */
@@ -690,11 +686,7 @@ static int recover (lua_State *L, int status) {
   if (ci == NULL) return 0;  /* no recovery point */
   /* "finish" luaD_pcall */
   oldtop = restorestack(L, ci->extra);
-#ifdef RAVI_DEFER_STATEMENT
   luaF_close(L, oldtop, status);
-#else
-  luaF_close(L, oldtop);
-#endif
   luaD_seterrorobj(L, status, oldtop);
   L->ci = ci;
   L->allowhook = getoah(ci->callstatus);  /* restore original 'allowhook' */
@@ -837,18 +829,12 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   status = luaD_rawrunprotected(L, func, u);
   if (status != LUA_OK) {  /* an error occurred? */
     StkId oldtop = restorestack(L, old_top);
-#ifndef RAVI_DEFER_STATEMENT
-    luaF_close(L, oldtop);  /* close possible pending closures */
-    luaD_seterrorobj(L, status, oldtop);
-#endif
     L->ci = old_ci;
     L->allowhook = old_allowhooks;
     L->nny = old_nny;
-#ifdef RAVI_DEFER_STATEMENT
     status = luaF_close(L, oldtop, status);  /* close possible pending closures */
     oldtop = restorestack(L, old_top);
     luaD_seterrorobj(L, status, oldtop);
-#endif
     luaD_shrinkstack(L);
   }
   L->errfunc = old_errfunc;
