@@ -330,11 +330,14 @@ static const char Lua_header[] =
     "#define RAVI_TM_TRUISH (~RAVI_TM_FALSISH)\n"
     "#define RAVI_TM_BOOLEAN (RAVI_TM_FALSE | RAVI_TM_TRUE)\n"
     "#define RAVI_TM_NUMBER (RAVI_TM_INTEGER | RAVI_TM_FLOAT)\n"
-    "#define RAVI_TM_INDEXABLE (RAVI_TM_INTEGER_ARRAY | RAVI_TM_FLOAT_ARRAY | RAVI_TM_TABLE)\n"
     "#define RAVI_TM_STRING_OR_NIL (RAVI_TM_STRING | RAVI_TM_NIL)\n"
     "#define RAVI_TM_FUNCTION_OR_NIL (RAVI_TM_FUNCTION | RAVI_TM_NIL)\n"
     "#define RAVI_TM_BOOLEAN_OR_NIL (RAVI_TM_BOOLEAN | RAVI_TM_NIL)\n"
     "#define RAVI_TM_USERDATA_OR_NIL (RAVI_TM_USERDATA | RAVI_TM_NIL)\n"
+    "#define RAVI_TM_INTEGER_OR_NIL (RAVI_TM_INTEGER | RAVI_TM_NIL)\n"
+    "#define RAVI_TM_FLOAT_OR_NIL (RAVI_TM_FLOAT | RAVI_TM_NIL)"
+    "#define RAVI_TM_TABLE_OR_NIL (RAVI_TM_TABLE | RAVI_TM_NIL)"
+    "#define RAVI_TM_INDEXABLE (RAVI_TM_INTEGER_ARRAY | RAVI_TM_FLOAT_ARRAY | RAVI_TM_TABLE)\n"
     "#define RAVI_TM_ANY (~0)\n"
     "typedef enum {\n"
     "RAVI_TNIL = RAVI_TM_NIL,           /* NIL */\n"
@@ -344,12 +347,12 @@ static const char Lua_header[] =
     "RAVI_TARRAYINT = RAVI_TM_INTEGER_ARRAY,      /* array of ints */\n"
     "RAVI_TARRAYFLT = RAVI_TM_FLOAT_ARRAY,      /* array of doubles */\n"
     "RAVI_TTABLE = RAVI_TM_TABLE,         /* Lua table */\n"
-    "RAVI_TSTRING = RAVI_TM_STRING_OR_NIL,        /* string */\n"
-    "RAVI_TFUNCTION = RAVI_TM_FUNCTION_OR_NIL,      /* Lua or C Function */\n"
-    "RAVI_TBOOLEAN = RAVI_TM_BOOLEAN_OR_NIL,       /* boolean */\n"
+    "RAVI_TSTRING = RAVI_TM_STRING,        /* string */\n"
+    "RAVI_TFUNCTION = RAVI_TM_FUNCTION,      /* Lua or C Function */\n"
+    "RAVI_TBOOLEAN = RAVI_TM_BOOLEAN,       /* boolean */\n"
     "RAVI_TTRUE = RAVI_TM_TRUE,\n"
     "RAVI_TFALSE = RAVI_TM_FALSE,\n"
-    "RAVI_TUSERDATA = RAVI_TM_USERDATA_OR_NIL,      /* userdata or lightuserdata */\n"
+    "RAVI_TUSERDATA = RAVI_TM_USERDATA,      /* userdata or lightuserdata */\n"
     "RAVI_TANY = RAVI_TM_ANY,      /* Lua dynamic type */\n"
     "} ravitype_t;\n"
     "typedef struct Upvaldesc {\n"
@@ -596,11 +599,7 @@ static const char Lua_header[] =
     "  (ttisinteger(o) ? (*(i) = ivalue(o), 1) : luaV_tointeger(o,i,LUA_FLOORN2I))\n"
     "extern int luaV_tonumber_(const TValue *obj, lua_Number *n);\n"
     "extern int luaV_tointeger(const TValue *obj, lua_Integer *p, int mode);\n"
-#ifdef RAVI_DEFER_STATEMENT
     "extern int luaF_close (lua_State *L, StkId level, int status);\n"
-#else
-    "extern void luaF_close (lua_State *L, StkId level);\n"
-#endif
     "extern int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres);\n"
     "extern int luaV_equalobj(lua_State *L, const TValue *t1, const TValue *t2);\n"
     "extern int luaV_lessthan(lua_State *L, const TValue *l, const TValue *r);\n"
@@ -636,9 +635,7 @@ static const char Lua_header[] =
     "extern void raviV_settable_sskey(lua_State *L, const TValue *t, TValue *key, TValue *val);\n"
     "extern void raviV_gettable_i(lua_State *L, const TValue *t, TValue *key, TValue *val);\n"
     "extern void raviV_settable_i(lua_State *L, const TValue *t, TValue *key, TValue *val);\n"
-#ifdef RAVI_DEFER_STATEMENT
     "extern void raviV_op_defer(lua_State *L, TValue *ra);\n"
-#endif
     "extern lua_Integer luaV_shiftl(lua_Integer x, lua_Integer y);\n"
     "extern void ravi_dump_value(lua_State *L, const struct lua_TValue *v);\n"
     "extern void raviV_op_bnot(lua_State *L, TValue *ra, TValue *rb);\n"
@@ -1055,12 +1052,8 @@ static void emit_comparison(struct function *fn, int A, int B, int C, int j, int
   membuff_add_fstring(&fn->body, "if (result == %d) {\n", A);
   if (jA > 0) {
     membuff_add_fstring(&fn->body, " ra = R(%d);\n", jA - 1);
-#ifdef RAVI_DEFER_STATEMENT
     membuff_add_string(&fn->body, " luaF_close(L, ra, LUA_OK);\n");
     membuff_add_string(&fn->body, " base = ci->u.l.base;\n");
-#else
-    membuff_add_string(&fn->body, " luaF_close(L, ra);\n");
-#endif
   }
   membuff_add_fstring(&fn->body, "  goto Lbc_%d;\n", j);
   membuff_add_string(&fn->body, "}\n");
@@ -1098,13 +1091,9 @@ static void emit_op_loadk(struct function *fn, int A, int Bx, int pc) {
 
 static void emit_op_return(struct function *fn, int A, int B, int pc) {
   (void)pc;
-#ifdef RAVI_DEFER_STATEMENT
   membuff_add_string(&fn->body, "if (cl->p->sizep > 0) {\n luaF_close(L, base, LUA_OK);\n");
   membuff_add_string(&fn->body, " base = ci->u.l.base;\n");
   membuff_add_string(&fn->body, "}\n");
-#else
-  membuff_add_string(&fn->body, "if (cl->p->sizep > 0) luaF_close(L, base);\n");
-#endif
   emit_reg(fn, "ra", A);
   membuff_add_fstring(&fn->body, "result = (%d != 0 ? %d - 1 : cast_int(L->top - ra));\n", B, B);
   membuff_add_string(&fn->body, "return luaD_poscall(L, ci, ra, result);\n");
@@ -1130,12 +1119,8 @@ static void emit_op_jmp(struct function *fn, int A, int sBx, int pc) {
   (void)pc;
   if (A > 0) {
     membuff_add_fstring(&fn->body, "ra = R(%d);\n", A - 1);
-#ifdef RAVI_DEFER_STATEMENT
     membuff_add_string(&fn->body, "luaF_close(L, ra, LUA_OK);\n");
     membuff_add_string(&fn->body, "base = ci->u.l.base;\n");
-#else
-    membuff_add_string(&fn->body, "luaF_close(L, ra);\n");
-#endif
   }
   membuff_add_fstring(&fn->body, "goto Lbc_%d;\n", sBx);
 }
@@ -1163,12 +1148,8 @@ static void emit_op_test(struct function *fn, int A, int B, int C, int j, int jA
   membuff_add_fstring(&fn->body, "if (!result) {\n", A);
   if (jA > 0) {
     membuff_add_fstring(&fn->body, " ra = R(%d);\n", jA - 1);
-#ifdef RAVI_DEFER_STATEMENT
     membuff_add_string(&fn->body, " luaF_close(L, ra, LUA_OK);\n");
     membuff_add_string(&fn->body, " base = ci->u.l.base;\n");
-#else
-    membuff_add_string(&fn->body, " luaF_close(L, ra);\n");
-#endif
   }
   membuff_add_fstring(&fn->body, "  goto Lbc_%d;\n", j);
   membuff_add_string(&fn->body, " }\n");
@@ -1188,12 +1169,8 @@ static void emit_op_testset(struct function *fn, int A, int B, int C, int j, int
   membuff_add_string(&fn->body, "  setobjs2s(L, ra, rb);");
   if (jA > 0) {
     membuff_add_fstring(&fn->body, " ra = R(%d);\n", jA - 1);
-#ifdef RAVI_DEFER_STATEMENT
     membuff_add_string(&fn->body, " luaF_close(L, ra, LUA_OK);\n");
     membuff_add_string(&fn->body, " base = ci->u.l.base;\n");
-#else
-    membuff_add_string(&fn->body, " luaF_close(L, ra);\n");
-#endif
   }
   membuff_add_fstring(&fn->body, "  goto Lbc_%d;\n", j);
   membuff_add_string(&fn->body, " }\n");
@@ -1460,13 +1437,11 @@ static void emit_op_divii(struct function *fn, int A, int B, int C, int pc) {
                      "(lua_Number)(ivalue(rc)));\n");
 }
 
-#ifdef RAVI_DEFER_STATEMENT
 static void emit_op_defer(struct function *fn, int A, int pc) {
   (void)pc;
   emit_reg(fn, "ra", A);
   membuff_add_string(&fn->body, "raviV_op_defer(L, ra);\n");
 }
-#endif
 
 static void emit_op_loadfz(struct function *fn, int A, int pc) {
   (void)pc;
@@ -1558,10 +1533,12 @@ static void emit_op_movetab(struct function *fn, int A, int B, int pc) {
   membuff_add_string(&fn->body, "}\n");
 }
 
-static void emit_op_toint(struct function *fn, int A, int pc) {
+static void emit_op_toint(struct function *fn, int A, int pc, int allow_nil) {
   (void)pc;
   emit_reg(fn, "ra", A);
   membuff_add_string(&fn->body, "i = 0;\n");
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "if(!ttisnil(ra)) { \n");
   membuff_add_string(&fn->body, "if (ttisinteger(ra)) {i = ivalue(ra); setivalue(ra, i); }\n");
   membuff_add_string(&fn->body, "else {\n");
 #if GOTO_ON_ERROR
@@ -1571,15 +1548,17 @@ static void emit_op_toint(struct function *fn, int A, int pc) {
   membuff_add_fstring(&fn->body, " raviV_raise_error(L, %d);\n", Error_integer_expected);
 #endif
   membuff_add_string(&fn->body, "}\n");
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "}\n");
 }
 
-static void emit_op_toflt(struct function *fn, int A, int pc) {
+static void emit_op_toflt(struct function *fn, int A, int pc, int allow_nil) {
   (void)pc;
   emit_reg(fn, "ra", A);
   membuff_add_string(&fn->body, "n = 0.0;\n");
-  membuff_add_string(
-      &fn->body,
-      "if (ttisnumber(ra)) { n = (ttisinteger(ra) ? (double) ivalue(ra) : fltvalue(ra)); setfltvalue(ra, n); }\n");
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "if(!ttisnil(ra)) { \n");
+  membuff_add_string(&fn->body, "if (ttisnumber(ra)) { n = (ttisinteger(ra) ? (double) ivalue(ra) : fltvalue(ra)); setfltvalue(ra, n); }\n");
   membuff_add_string(&fn->body, "else {\n");
 #if GOTO_ON_ERROR
   membuff_add_fstring(&fn->body, " error_code = %d;\n", Error_number_expected);
@@ -1588,6 +1567,77 @@ static void emit_op_toflt(struct function *fn, int A, int pc) {
   membuff_add_fstring(&fn->body, " raviV_raise_error(L, %d);\n", Error_number_expected);
 #endif
   membuff_add_string(&fn->body, "}\n");
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "}\n");
+}
+
+static void emit_op_totab(struct function *fn, int A, int pc, int allow_nil) {
+  (void)pc;
+  emit_reg(fn, "ra", A);
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "if(!ttisnil(ra)) { \n");
+  membuff_add_string(&fn->body, "if (!ttisLtable(ra)) {\n");
+#if GOTO_ON_ERROR
+  membuff_add_fstring(&fn->body, " error_code = %d;\n", Error_table_expected);
+  membuff_add_string(&fn->body, " goto Lraise_error;\n");
+#else
+  membuff_add_fstring(&fn->body, " raviV_raise_error(L, %d);\n", Error_table_expected);
+#endif
+  membuff_add_string(&fn->body, "}\n");
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "}\n");
+}
+
+static void emit_op_toclosure(struct function *fn, int A, int pc, int allow_nil) {
+  (void)pc;
+  emit_reg(fn, "ra", A);
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "if(!ttisnil(ra)) { \n");
+  membuff_add_string(&fn->body, "if (!ttisclosure(ra)) {\n");
+#if GOTO_ON_ERROR
+  membuff_add_fstring(&fn->body, " error_code = %d;\n", Error_closure_expected);
+  membuff_add_string(&fn->body, " goto Lraise_error;\n");
+#else
+  membuff_add_fstring(&fn->body, " raviV_raise_error(L, %d);\n", Error_closure_expected);
+#endif
+  membuff_add_string(&fn->body, "}\n");
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "}\n");
+}
+
+static void emit_op_tostring(struct function *fn, int A, int pc, int allow_nil) {
+  (void)pc;
+  emit_reg(fn, "ra", A);
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "if(!ttisnil(ra)) { \n");
+  membuff_add_string(&fn->body, "if (!ttisstring(ra)) {\n");
+#if GOTO_ON_ERROR
+  membuff_add_fstring(&fn->body, " error_code = %d;\n", Error_string_expected);
+  membuff_add_string(&fn->body, " goto Lraise_error;\n");
+#else
+  membuff_add_fstring(&fn->body, " raviV_raise_error(L, %d);\n", Error_string_expected);
+#endif
+  membuff_add_string(&fn->body, "}\n");
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "}\n");
+}
+
+static void emit_op_totype(struct function *fn, int A, int Bx, int pc, int allow_nil) {
+  (void)pc;
+  emit_reg(fn, "ra", A);
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "if(!ttisnil(ra)) { \n");
+  membuff_add_fstring(&fn->body, " rb = K(%d);\n", Bx);
+  membuff_add_string(&fn->body, "  if (!ttisshrstring(rb) || !raviV_check_usertype(L, tsvalue(rb), ra)) {\n");
+#if 0 // GOTO_ON_ERROR
+  membuff_add_fstring(&fn->body, "   error_code = %d;\n", Error_type_mismatch);
+  membuff_add_string(&fn->body, "   goto Lraise_error;\n");
+#else
+  membuff_add_fstring(&fn->body, "   raviV_raise_error_with_info(L, %d, getstr(tsvalue(rb)));\n", Error_type_mismatch);
+#endif
+  membuff_add_string(&fn->body, "  }\n");
+  if(allow_nil) 
+    membuff_add_string(&fn->body, "}\n");
 }
 
 static void emit_op_toai(struct function *fn, int A, int pc) {
@@ -1613,61 +1663,6 @@ static void emit_op_toaf(struct function *fn, int A, int pc) {
 #else
   membuff_add_fstring(&fn->body, " raviV_raise_error(L, %d);\n", Error_number_array_expected);
 #endif
-  membuff_add_string(&fn->body, "}\n");
-}
-
-static void emit_op_totab(struct function *fn, int A, int pc) {
-  (void)pc;
-  emit_reg(fn, "ra", A);
-  membuff_add_string(&fn->body, "if (!ttisLtable(ra)) {\n");
-#if GOTO_ON_ERROR
-  membuff_add_fstring(&fn->body, " error_code = %d;\n", Error_table_expected);
-  membuff_add_string(&fn->body, " goto Lraise_error;\n");
-#else
-  membuff_add_fstring(&fn->body, " raviV_raise_error(L, %d);\n", Error_table_expected);
-#endif
-  membuff_add_string(&fn->body, "}\n");
-}
-
-static void emit_op_toclosure(struct function *fn, int A, int pc) {
-  (void)pc;
-  emit_reg(fn, "ra", A);
-  membuff_add_string(&fn->body, "if (!ttisclosure(ra)) {\n");
-#if GOTO_ON_ERROR
-  membuff_add_fstring(&fn->body, " error_code = %d;\n", Error_closure_expected);
-  membuff_add_string(&fn->body, " goto Lraise_error;\n");
-#else
-  membuff_add_fstring(&fn->body, " raviV_raise_error(L, %d);\n", Error_closure_expected);
-#endif
-  membuff_add_string(&fn->body, "}\n");
-}
-
-static void emit_op_tostring(struct function *fn, int A, int pc) {
-  (void)pc;
-  emit_reg(fn, "ra", A);
-  membuff_add_string(&fn->body, "if (!ttisstring(ra)) {\n");
-#if GOTO_ON_ERROR
-  membuff_add_fstring(&fn->body, " error_code = %d;\n", Error_string_expected);
-  membuff_add_string(&fn->body, " goto Lraise_error;\n");
-#else
-  membuff_add_fstring(&fn->body, " raviV_raise_error(L, %d);\n", Error_string_expected);
-#endif
-  membuff_add_string(&fn->body, "}\n");
-}
-
-static void emit_op_totype(struct function *fn, int A, int Bx, int pc) {
-  (void)pc;
-  emit_reg(fn, "ra", A);
-  membuff_add_string(&fn->body, "if (!ttisnil(ra)) {\n");
-  membuff_add_fstring(&fn->body, " rb = K(%d);\n", Bx);
-  membuff_add_string(&fn->body, "  if (!ttisshrstring(rb) || !raviV_check_usertype(L, tsvalue(rb), ra)) {\n");
-#if 0 // GOTO_ON_ERROR
-  membuff_add_fstring(&fn->body, "   error_code = %d;\n", Error_type_mismatch);
-  membuff_add_string(&fn->body, "   goto Lraise_error;\n");
-#else
-  membuff_add_fstring(&fn->body, "   raviV_raise_error_with_info(L, %d, getstr(tsvalue(rb)));\n", Error_type_mismatch);
-#endif
-  membuff_add_string(&fn->body, "  }\n");
   membuff_add_string(&fn->body, "}\n");
 }
 
@@ -2245,29 +2240,50 @@ bool raviJ_codegen(struct lua_State *L, struct Proto *p, struct ravi_compile_opt
       case OP_RAVI_LOADIZ: {
         emit_op_loadiz(&fn, A, pc);
       } break;
+      // mandatory types
       case OP_RAVI_TOINT: {
-        emit_op_toint(&fn, A, pc);
+        emit_op_toint(&fn, A, pc, 0);
       } break;
       case OP_RAVI_TOFLT: {
-        emit_op_toflt(&fn, A, pc);
+        emit_op_toflt(&fn, A, pc, 0);
       } break;
       case OP_RAVI_TOTAB: {
-        emit_op_totab(&fn, A, pc);
+        emit_op_totab(&fn, A, pc, 0);
       } break;
+      case OP_RAVI_TOSTRING: {
+        emit_op_tostring(&fn, A, pc, 0);
+      } break;
+      case OP_RAVI_TOCLOSURE: {
+        emit_op_toclosure(&fn, A, pc, 0);
+      } break;
+      case OP_RAVI_TOTYPE: {
+        emit_op_totype(&fn, A, GETARG_Bx(i), pc, 0);
+      } break;
+      // optional types
+      case OP_RAVI_TOINT_NIL: {
+        emit_op_toint(&fn, A, pc, 1);
+      } break;
+      case OP_RAVI_TOFLT_NIL: {
+        emit_op_toflt(&fn, A, pc, 1);
+      } break;
+      case OP_RAVI_TOTAB_NIL: {
+        emit_op_totab(&fn, A, pc, 1);
+      } break;
+      case OP_RAVI_TOSTRING_NIL: {
+        emit_op_tostring(&fn, A, pc, 1);
+      } break;
+      case OP_RAVI_TOCLOSURE_NIL: {
+        emit_op_toclosure(&fn, A, pc, 1);
+      } break;
+      case OP_RAVI_TOTYPE_NIL: {
+        emit_op_totype(&fn, A, GETARG_Bx(i), pc, 1);
+      } break;
+      // tables
       case OP_RAVI_TOIARRAY: {
         emit_op_toai(&fn, A, pc);
       } break;
       case OP_RAVI_TOFARRAY: {
         emit_op_toaf(&fn, A, pc);
-      } break;
-      case OP_RAVI_TOSTRING: {
-        emit_op_tostring(&fn, A, pc);
-      } break;
-      case OP_RAVI_TOCLOSURE: {
-        emit_op_toclosure(&fn, A, pc);
-      } break;
-      case OP_RAVI_TOTYPE: {
-        emit_op_totype(&fn, A, GETARG_Bx(i), pc);
       } break;
       case OP_RAVI_MOVEI: {
         int B = GETARG_B(i);
@@ -2330,11 +2346,9 @@ bool raviJ_codegen(struct lua_State *L, struct Proto *p, struct ravi_compile_opt
         int B = GETARG_B(i);
         emit_op_len(&fn, A, B, pc);
       } break;
-#ifdef RAVI_DEFER_STATEMENT
       case OP_RAVI_DEFER: {
         emit_op_defer(&fn, A, pc);
       } break;
-#endif
       case OP_RAVI_SHR_II:
       case OP_RAVI_SHL_II:
       case OP_RAVI_BXOR_II:

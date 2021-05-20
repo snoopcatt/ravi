@@ -113,6 +113,13 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "TOBOOLEAN",
   "TOCLOSURE",
   "TOTYPE",
+  "TOINT_NIL", /* A R(A) := toint(R(A)) */
+  "TOFLT_NIL", /* A R(A) := tofloat(R(A)) */
+  "TOTAB_NIL",     /* A R(A) := to_table(R(A)) */
+  "TOSTRING_NIL",
+  "TOBOOLEAN_NIL",
+  "TOCLOSURE_NIL",
+  "TOTYPE_NIL",
   "TOIARRAY", /* A R(A) := to_arrayi(R(A)) */
   "TOFARRAY", /* A R(A) := to_arrayf(R(A)) */
 
@@ -257,7 +264,7 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgN, OpArgN, iABC)    /* OP_RAVI_TOCLOSURE */
  ,opmode(0, 1, OpArgK, OpArgN, iABx)    /* OP_RAVI_TOTYPE */
  
-  ,opmode(0, 1, OpArgN, OpArgN, iABC)    /* OP_RAVI_TOINT_NIL  A R(A) := toint(R(A)) */
+ ,opmode(0, 1, OpArgN, OpArgN, iABC)    /* OP_RAVI_TOINT_NIL  A R(A) := toint(R(A)) */
  ,opmode(0, 1, OpArgN, OpArgN, iABC)    /* OP_RAVI_TOFLT_NIL  A R(A) := tonumber(R(A)) */
  ,opmode(0, 1, OpArgN, OpArgN, iABC)    /* OP_RAVI_TOTAB_NIL A R(A) := check_table(R(A)) */
  ,opmode(0, 1, OpArgN, OpArgN, iABC)    /* OP_RAVI_TOSTRING_NIL */

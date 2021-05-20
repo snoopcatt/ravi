@@ -2546,6 +2546,7 @@ int luaV_execute (lua_State *L) {
           luaG_runerror(L, "table expected");
         vmbreak;
       }
+      // mandatory types
       vmcase(OP_RAVI_TOINT) {
         lua_Integer j;
         if (RAVI_LIKELY(tointeger(ra, &j))) { setivalue(ra, j); }
@@ -2581,46 +2582,50 @@ int luaV_execute (lua_State *L) {
         vmbreak;
       }
       vmcase(OP_RAVI_TOTYPE) {
-          TValue *rb = k + GETARG_Bx(i);
-          if  (!ttisshrstring(rb))
-            luaG_runerror(L, "type name must be string");
-          TString *key = tsvalue(rb);
-          if (!raviV_check_usertype(L, key, ra))
-            luaG_runerror(L, "type mismatch: expected %s", getstr(key));
+        TValue *rb = k + GETARG_Bx(i);
+        if  (!ttisshrstring(rb))
+          luaG_runerror(L, "type name must be string");
+        TString *key = tsvalue(rb);
+        if (!raviV_check_usertype(L, key, ra))
+          luaG_runerror(L, "type mismatch: expected %s", getstr(key));
         vmbreak;
       }
       // optional types
       vmcase(OP_RAVI_TOINT_NIL) {
         lua_Integer j;
-        if (RAVI_LIKELY(tointeger(ra, &j))) { setivalue(ra, j); }
-        else if(!ttisnil(ra))
-          luaG_runerror(L, "TOINT: integer expected");
+        if(!ttisnil(ra)) {
+          if (RAVI_LIKELY(tointeger(ra, &j))) { setivalue(ra, j); }
+          else
+            luaG_runerror(L, "TOINT: integer expected");
+        }
         vmbreak;
       }
       vmcase(OP_RAVI_TOFLT_NIL) {
         lua_Number j;
-        if (RAVI_LIKELY(tonumber(ra, &j))) { setfltvalue(ra, j); }
-        else if(!ttisnil(ra))
-          luaG_runerror(L, "TOFLT: number expected");
+        if(!ttisnil(ra)) {
+          if (RAVI_LIKELY(tonumber(ra, &j))) { setfltvalue(ra, j); }
+          else
+            luaG_runerror(L, "TOFLT: number expected");
+        }
         vmbreak;
       }
       vmcase(OP_RAVI_TOTAB_NIL) {
-        if (RAVI_UNLIKELY(!ttisLtable(ra)) && !ttisnil(ra))
+        if (!ttisnil(ra) && RAVI_UNLIKELY(!ttisLtable(ra)))
           luaG_runerror(L, "table expected");
         vmbreak;
       }
       vmcase(OP_RAVI_TOSTRING_NIL) {
-        if (RAVI_UNLIKELY(!ttisstring(ra)) && !ttisnil(ra))
+        if (!ttisnil(ra) && RAVI_UNLIKELY(!ttisstring(ra)))
           luaG_runerror(L, "string expected");        
         vmbreak;
       }
       vmcase(OP_RAVI_TOBOOLEAN_NIL) {
-        if (RAVI_UNLIKELY(!ttisboolean(ra)) && !ttisnil(ra))
+        if (!ttisnil(ra) && RAVI_UNLIKELY(!ttisboolean(ra)))
           luaG_runerror(L, "boolean expected");
         vmbreak;
       }
       vmcase(OP_RAVI_TOCLOSURE_NIL) {
-        if (RAVI_UNLIKELY(!ttisclosure(ra)) && !ttisnil(ra))
+        if (!ttisnil(ra) && RAVI_UNLIKELY(!ttisclosure(ra)))
           luaG_runerror(L, "closure expected");
         vmbreak;
       }
