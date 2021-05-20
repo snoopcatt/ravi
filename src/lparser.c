@@ -1445,9 +1445,9 @@ static void ravi_typecheck(LexState *ls, expdesc *v, ravi_type_map *var_types,
   }
   /* if we are calling a function then convert return types */
   else if ((vartype == RAVI_TM_FLOAT || vartype == RAVI_TM_INTEGER ||
-            vartype == RAVI_TM_FLOAT_ARRAY || vartype == RAVI_TM_INTEGER_ARRAY ||
-            vartype == RAVI_TM_TABLE || vartype == RAVI_TM_STRING_OR_NIL ||
-            vartype == RAVI_TM_FUNCTION_OR_NIL || vartype == RAVI_TM_USERDATA_OR_NIL) &&
+            vartype == RAVI_TM_TABLE || vartype == RAVI_TM_STRING ||
+            vartype == RAVI_TM_FUNCTION || vartype == RAVI_TM_USERDATA || 
+            vartype == RAVI_TM_FLOAT_ARRAY || vartype == RAVI_TM_INTEGER_ARRAY) &&
             v->k == VCALL) {
     /* For local variable declarations that call functions e.g.
       * local i = func()
@@ -1474,9 +1474,9 @@ static void ravi_typecheck(LexState *ls, expdesc *v, ravi_type_map *var_types,
       /* do we need to convert ? */
       ravi_code_typecoersion(ls, a + (i - n), var_types[i], NULL);
   }
-  else if (vartype == RAVI_TM_STRING_OR_NIL ||
-            vartype == RAVI_TM_FUNCTION_OR_NIL ||
-            vartype == RAVI_TM_USERDATA_OR_NIL) {
+  else if (vartype == RAVI_TM_FLOAT_OR_NIL || vartype == RAVI_TM_INTEGER_OR_NIL ||
+           vartype == RAVI_TM_TABLE_OR_NIL || vartype == RAVI_TM_STRING_OR_NIL ||
+           vartype == RAVI_TM_FUNCTION_OR_NIL || vartype == RAVI_TM_USERDATA_OR_NIL) {
     TString *usertype = usertypes[n]; // NULL if var_types[n] is not userdata
     /* we need to make sure that a register is assigned to 'v'
       so that we can emit type assertion instructions. This would have 
